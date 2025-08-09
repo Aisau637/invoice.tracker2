@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>COGS Quest — Glacier</title>
+  <style>
+    :root{
+      /* Glacier blue theme */
+      --bg1:#e6f2f8; --bg2:#d8eef7; --card:#ffffff; --muted:#6b7c93; --text:#0b3356; --sub:#496b89; --ok:#15803d; --warn:#b45309; --alert:#b91c1c; --accent:#4ba3d9; --line:#cfe5f2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;color:var(--text)}
+    .wrap{max-width:1200px;margin:24px auto;padding:16px}
+    h1{margin:0 0 4px;font-size:28px}
+    .sub{color:var(--sub);font-size:12px}
+    .grid{display:grid;gap:12px}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .g-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media(max-width:900px){.g-2,.g-3,.g-4{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 5px 16px rgba(15,64,96,.06)}
+    label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
+    input,select,button,textarea{font:inherit}
+    input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#f7fbfe;color:var(--text)}
+    .row{display:flex;gap:8px;align-items:center}
+    .btn{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#eff7fc;color:var(--text);cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#7cc7ef,#5bb6e8);border-color:#4ba3d9;color:#07324f}
+    .btn.ghost{background:transparent}
+    .badge{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:6px 10px;font-size:12px;border:1px solid var(--line);background:#eef7fd;color:#sub}
+    .badge.ok{background:#e8f6ee;border-color:#bde7cd;color:#0f5132}
+    .badge.warn{background:#fff6e6;border-color:#f3d9aa;color:#7a4a0b}
+    .badge.alert{background:#ffebeb;border-color:#f0b5b5;color:#7f1d1d}
+    .stat{border:1px solid var(--line);border-radius:16px;padding:12px;background:#ffffff}
+    .stat .l{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.08em}
+    .stat .v{font-size:22px;font-weight:700}
+    .muted{color:var(--sub)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    th{color:var(--sub);font-weight:600;background:#f5fbff}
+    .right{text-align:right}
+    .footer{color:#587795;text-align:center;padding:16px;font-size:12px}
+    .pill{padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:#eef7fd;color:#0b3356;font-size:12px}
+    .progress{height:10px;background:#eef7fd;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .progress > b{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)}
+    .tabs{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#eef7fd;color:#0b3356;cursor:pointer}
+    .tab.active{background:#5bb6e8;color:#03263e;border-color:#4ba3d9}
+    .svgwrap{display:grid;place-items:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="justify-content:space-between;align-items:flex-end">
+      <div>
+        <h1>COGS Quest — Glacier</h1>
+        <div class="sub">Liquor • Beer • Wine — month-by-month tracking with year summary. Data saves locally.</div>
+      </div>
+      <div class="row" style="gap:16px;align-items:center">
+        <div class="row" style="gap:6px">
+          <label for="monthPick" style="margin:0">Month</label>
+          <input type="month" id="monthPick" />
+          <button class="btn" id="prevMonth">◀</button>
+          <button class="btn" id="nextMonth">▶</button>
+        </div>
+        <div style="min-width:220px">
+          <div class="sub">Level</div>
+          <div class="row" style="justify-content:space-between"><b id="level" style="font-size:22px">0</b><span class="sub">XP: <span id="xpMinor">0</span>/100</span></div>
+          <div class="progress"><b id="xpBar" style="width:0%"></b></div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="dash">Dashboard</button>
+      <button class="tab" data-tab="sales">Sales (Daily)</button>
+      <button class="tab" data-tab="liq">Liquor</button>
+      <button class="tab" data-tab="beer">Beer</button>
+      <button class="tab" data-tab="wine">Wine</button>
+      <button class="tab" data-tab="inv">Invoices</button>
+      <button class="tab" data-tab="year">Year Summary</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- DASHBOARD (Totals only) -->
+    <section id="dash" class="grid g-2">
+      <div class="card">
+        <div class="grid g-2">
+          <div>
+            <label>Start Date</label>
+            <input type="date" id="startDate"/>
+          </div>
+          <div>
+            <label>End Date</label>
+            <input type="date" id="endDate"/>
+          </div>
+        </div>
+
+        <div class="grid g-3" style="margin-top:12px">
+          <div class="stat"><div class="l">Total Sales</div><div class="v" id="totalSales">$0.00</div></div>
+          <div class="stat"><div class="l">Total Purchases</div><div class="v" id="totalPurch">$0.00</div></div>
+          <div class="stat"><div class="l">Budget Remaining (Total)</div><div class="v" id="budRemain">$0.00</div></div>
+        </div>
+
+        <div class="grid g-2" style="margin-top:12px">
+          <div class="card">
+            <div class="row" style="justify-content:space-between;margin-bottom:8px">
+              <b>Overall COGS</b>
+              <span id="overallBadge" class="badge">—</span>
+            </div>
+            <div class="svgwrap" style="height:260px">
+              <svg id="gauge" width="240" height="240" viewBox="0 0 240 240"></svg>
+            </div>
+            <div class="sub" id="overallText">$0 / $0 = 0.00%</div>
+          </div>
+          <div class="card">
+            <b>Spend Guidance (Total)</b>
+            <div class="muted" style="margin-top:8px">Max Spend @ 21%: <b id="max21">$0.00</b></div>
+            <div class="muted" style="margin-top:4px">Remaining to stay @ 21%: <b id="remain21">$0.00</b></div>
+            <div class="sub" style="margin-top:8px">+5 XP per invoice. +20 XP on days your overall COGS ≤ 21% (with sales).</div>
+            <div style="margin-top:12px" class="row">
+              <button class="btn" id="testXP">+1 XP (test)</button>
+              <button class="btn ghost" id="resetAll" style="color:#b91c1c">Reset All Data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <b>Quick Add Invoice</b>
+        <div class="grid g-2" style="margin-top:8px">
+          <div>
+            <label>Date</label>
+            <input type="date" id="invDate"/>
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="invCat">
+              <option>Liquor</option>
+              <option>Beer</option>
+              <option>Wine</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid g-2" style="margin-top:8px">
+          <div>
+            <label>Vendor</label>
+            <input id="invVendor" placeholder="Republic, Ben E. Keith, etc."/>
+          </div>
+          <div>
+            <label>Invoice #</label>
+            <input id="invNo"/>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label>Description</label>
+          <input id="invDesc" placeholder="e.g., Patron 1L x 6"/>
+        </div>
+        <div style="margin-top:8px">
+          <label>Amount</label>
+          <input type="number" id="invAmt" placeholder="0"/>
+        </div>
+        <div style="margin-top:12px" class="row">
+          <button class="btn primary" id="addInv">Add Invoice (+5 XP)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SALES (DAILY) -->
+    <section id="sales" class="card" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <b>Daily Sales for <span id="salesMonthLabel"></span></b>
+        <span class="pill" id="salesTotals">Liquor $0 • Beer $0 • Wine $0</span>
+      </div>
+      <div style="overflow:auto;margin-top:8px">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Liquor</th><th>Beer</th><th>Wine</th><th class="right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="salesTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CATEGORY TABS -->
+    <section id="liq" class="card" style="display:none"></section>
+    <section id="beer" class="card" style="display:none"></section>
+    <section id="wine" class="card" style="display:none"></section>
+
+    <!-- INVOICES -->
+    <section id="inv" class="card" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <b>Invoices (filtered by date range)</b>
+        <span class="pill" id="invCount">0 items</span>
+      </div>
+      <div style="overflow:auto;margin-top:8px">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>Category</th><th>Vendor</th><th>Invoice #</th><th>Description</th><th class="right">Amount</th><th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="invTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- YEAR SUMMARY -->
+    <section id="year" class="card" style="display:none">
+      <div class="row" style="justify-content:space-between">
+        <b>Year Summary — <span id="yearLabel"></span></b>
+        <span class="sub">Aggregates saved months for this year</span>
+      </div>
+      <div style="overflow:auto;margin-top:8px">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th class="right">Sales</th>
+              <th class="right">Purchases</th>
+              <th class="right">COGS%</th>
+              <th class="right">Under 21% Days</th>
+              <th class="right">Over 22% Days</th>
+            </tr>
+          </thead>
+          <tbody id="yearTbody"></tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              <th class="right" id="yrSales">$0</th>
+              <th class="right" id="yrPurch">$0</th>
+              <th class="right" id="yrCOGS">0.00%</th>
+              <th class="right" id="yrUnder">0</th>
+              <th class="right" id="yrOver">0</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="card" style="display:none">
+      <b>Data Export / Import</b>
+      <div class="sub" style="margin-top:6px">Stored per month. Copy or import your JSON snapshot.</div>
+      <div style="margin-top:8px">
+        <textarea id="dataText" style="width:100%;height:180px"></textarea>
+      </div>
+      <div class="row" style="margin-top:8px;gap:8px">
+        <button class="btn" id="copyData">Copy JSON</button>
+        <button class="btn ghost" id="importData">Import JSON</button>
+      </div>
+    </section>
+
+    <div class="footer">COGS Quest — keep it ≤ 21% and win the month.</div>
+  </div>
+
+<script>
+(function(){
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  const fmt = (n) => (n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const ymStr = (d)=> d.toISOString().slice(0,7); // YYYY-MM
+  const firstOfMonth = (d=new Date()) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const daysInMonth = (y,m)=> new Date(y, m+1, 0).getDate();
+  const uid = () => Math.random().toString(36).slice(2);
+
+  const STORE_KEY = 'cogs-glacier-v3';
+
+  // Structure: { selectedYM, months: { 'YYYY-MM': MonthData }, xp }
+  const defaultMonth = (y,m)=>({
+    invoices: [],
+    budgets: { Liquor:0, Beer:0, Wine:0 },
+    salesDaily: {}, // 'YYYY-MM-DD': { Liquor, Beer, Wine }
+  });
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY)||'') || {}; }catch{ return {}; }
+  }
+  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+  // init state
+  let state = load();
+  if(!state.selectedYM){ state.selectedYM = ymStr(new Date()); }
+  if(!state.months){ state.months = {}; }
+  if(!state.xp){ state.xp = 0; }
+  if(!state.months[state.selectedYM]){
+    const d = new Date(state.selectedYM+'-01T00:00:00');
+    state.months[state.selectedYM] = defaultMonth(d.getFullYear(), d.getMonth());
+  }
+  save();
+
+  // DOM init
+  $('#monthPick').value = state.selectedYM;
+  $('#invDate').value = todayStr();
+
+  // Tabs
+  $$('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    const t = btn.dataset.tab;
+    ['dash','sales','liq','beer','wine','inv','year','settings'].forEach(id=>$('#'+id).style.display = (id===t? (t==='dash'?'grid':'block') : 'none'));
+    if(t==='settings'){ $('#dataText').value = JSON.stringify(state,null,2); }
+    if(t==='sales'){ renderSalesTable(); }
+    if(t==='year'){ renderYear(); }
+    if(['liq','beer','wine'].includes(t)) renderCategory(t);
+  }));
+
+  // Month picker prev/next
+  $('#prevMonth').addEventListener('click',()=>changeMonth(-1));
+  $('#nextMonth').addEventListener('click',()=>changeMonth(1));
+  $('#monthPick').addEventListener('change',(e)=>{ setMonth(e.target.value); });
+
+  function setMonth(ym){
+    state.selectedYM = ym;
+    if(!state.months[ym]) state.months[ym] = defaultMonth(...ym.split('-').map(Number));
+    save();
+    render();
+    renderSalesTable();
+    renderCategory('liq');
+  }
+  function changeMonth(delta){
+    const [y,m] = state.selectedYM.split('-').map(Number);
+    const d = new Date(y, m-1+delta, 1);
+    const ym = ymStr(d);
+    setMonth(ym);
+    $('#monthPick').value = ym;
+  }
+
+  // Quick add invoice
+  $('#addInv').addEventListener('click', ()=>{
+    const inv = {
+      id: uid(),
+      date: $('#invDate').value,
+      category: $('#invCat').value,
+      vendor: $('#invVendor').value.trim(),
+      invoiceNo: $('#invNo').value.trim(),
+      description: $('#invDesc').value.trim(),
+      amount: +$('#invAmt').value||0
+    };
+    if(!inv.date || !inv.amount) { alert('Enter at least a date and amount'); return; }
+    const ym = inv.date.slice(0,7);
+    if(!state.months[ym]) state.months[ym] = defaultMonth(...ym.split('-').map(Number));
+    state.months[ym].invoices.unshift(inv);
+    state.xp += 5;
+    save();
+    // clear
+    $('#invVendor').value = ''; $('#invNo').value=''; $('#invDesc').value=''; $('#invAmt').value='';
+    render();
+  });
+
+  // Date filters
+  $('#startDate').addEventListener('change', ()=> render());
+  $('#endDate').addEventListener('change', ()=> render());
+
+  // Settings
+  $('#copyData').addEventListener('click',()=>{ navigator.clipboard.writeText(JSON.stringify(state)); alert('Data copied'); });
+  $('#importData').addEventListener('click',()=>{
+    try{ const obj = JSON.parse($('#dataText').value); state = obj; save(); render(); renderSalesTable(); renderCategory('liq'); alert('Imported!'); }catch{ alert('Invalid JSON'); }
+  });
+
+  // XP test
+  $('#testXP').addEventListener('click', ()=>{ state.xp += 1; save(); render(); });
+
+  function monthMeta(ym){
+    const mm = state.months[ym];
+    // sum daily sales
+    let sL=0,sB=0,sW=0; Object.values(mm.salesDaily).forEach(v=>{ sL+=v.Liquor||0; sB+=v.Beer||0; sW+=v.Wine||0; });
+    const sales = {Liquor:sL, Beer:sB, Wine:sW};
+    // date range defaults
+    const d = new Date(ym+'-01T00:00:00');
+    const start = $('#startDate').value || new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0,10);
+    const end = $('#endDate').value || new Date(d.getFullYear(), d.getMonth()+1, 0).toISOString().slice(0,10);
+
+    // filter invoices by range
+    const inv = mm.invoices.filter(i=>{ const t=i.date; return t>=start && t<=end; });
+    const purch = {Liquor:0, Beer:0, Wine:0}; inv.forEach(i=> purch[i.category]+= i.amount||0);
+
+    const totals = {
+      salesTotal: sales.Liquor + sales.Beer + sales.Wine,
+      purchTotal: purch.Liquor + purch.Beer + purch.Wine,
+      budgetTotal: mm.budgets.Liquor + mm.budgets.Beer + mm.budgets.Wine
+    };
+
+    const cogs = {
+      Liquor: sales.Liquor ? purch.Liquor/sales.Liquor : 0,
+      Beer: sales.Beer ? purch.Beer/sales.Beer : 0,
+      Wine: sales.Wine ? purch.Wine/sales.Wine : 0,
+    };
+
+    const overall = totals.salesTotal ? totals.purchTotal / totals.salesTotal : 0;
+
+    return { mm, sales, inv, purch, totals, cogs, overall, start, end };
+  }
+
+  function render(){
+    const ym = state.selectedYM;
+    const { mm, inv, totals, overall } = monthMeta(ym);
+
+    // Stats (totals only)
+    $('#totalSales').textContent = fmt(totals.salesTotal);
+    $('#totalPurch').textContent = fmt(totals.purchTotal);
+    $('#budRemain').textContent = fmt(totals.budgetTotal - totals.purchTotal);
+
+    const badge = $('#overallBadge');
+    const status = overall>0.22? 'alert' : overall>0.21? 'warn' : 'ok';
+    badge.className = 'badge '+status;
+    badge.textContent = status==='alert'? 'Over 22%' : status==='warn'? '> 21%' : 'On Target';
+
+    $('#overallText').textContent = `${fmt(totals.purchTotal)} / ${fmt(totals.salesTotal)} = ${(overall*100).toFixed(2)}%`;
+    $('#max21').textContent = fmt(0.21*totals.salesTotal);
+    $('#remain21').textContent = fmt(0.21*totals.salesTotal - totals.purchTotal);
+
+    // XP / Level
+    const level = Math.floor((state.xp||0)/100);
+    const minor = (state.xp||0) % 100;
+    $('#level').textContent = level; $('#xpMinor').textContent = minor; $('#xpBar').style.width = minor+'%';
+
+    // Render invoices table
+    const tbody = $('#invTbody');
+    tbody.innerHTML = '';
+    inv.forEach(one=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${one.date}</td><td>${one.category}</td><td>${esc(one.vendor)}</td><td>${esc(one.invoiceNo)}</td><td>${esc(one.description)}</td><td class="right">${fmt(one.amount)}</td><td class="right"><button class="btn ghost" data-del="${one.id}">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+    $('#invCount').textContent = inv.length + ' item' + (inv.length===1?'':'s');
+
+    $$('button[data-del]').forEach(btn=>btn.addEventListener('click',()=>{
+      const id = btn.getAttribute('data-del');
+      const ym = state.selectedYM;
+      const mm = state.months[ym];
+      mm.invoices = mm.invoices.filter(x=>x.id!==id); save(); render();
+    }));
+
+    // Gauge
+    drawGauge(overall*100);
+  }
+
+  function renderSalesTable(){
+    const ym = state.selectedYM; const mm = state.months[ym];
+    const [Y,M] = ym.split('-').map(Number); const days = daysInMonth(Y,M-1);
+    $('#salesMonthLabel').textContent = ym;
+    const tbody = $('#salesTbody'); tbody.innerHTML='';
+
+    for(let d=1; d<=days; d++){
+      const date = new Date(Y, M-1, d).toISOString().slice(0,10);
+      const row = mm.salesDaily[date] || {Liquor:0,Beer:0,Wine:0};
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${date}</td>
+        <td><input type="number" class="sale" data-s="L" data-date="${date}" value="${row.Liquor||0}"/></td>
+        <td><input type="number" class="sale" data-s="B" data-date="${date}" value="${row.Beer||0}"/></td>
+        <td><input type="number" class="sale" data-s="W" data-date="${date}" value="${row.Wine||0}"/></td>
+        <td class="right" data-total="${date}">${fmt((row.Liquor||0)+(row.Beer||0)+(row.Wine||0))}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    // helper: live total update from inputs in DOM (no save)
+    const recalcRowTotal = (date)=>{
+      const inputs = $$(`input.sale[data-date="${date}"]`);
+      const v = inputs.reduce((acc,el)=>acc + (+el.value||0),0);
+      const cell = $(`td[data-total="${date}"]`);
+      if(cell) cell.textContent = fmt(v);
+    };
+    const recalcTotalsPill = ()=>{
+      let tL=0,tB=0,tW=0;
+      $$('#salesTbody input.sale').forEach(el=>{
+        const val = +el.value||0; const k = el.getAttribute('data-s');
+        if(k==='L') tL+=val; else if(k==='B') tB+=val; else tW+=val;
+      });
+      $('#salesTotals').textContent = `Liquor ${fmt(tL)} • Beer ${fmt(tB)} • Wine ${fmt(tW)}`;
+    };
+
+    // bind inputs — type freely; save on blur/change/Enter only
+    $$('#salesTbody input.sale').forEach(inp=>{
+      const date = inp.getAttribute('data-date');
+      // 1) Live feedback while typing
+      inp.addEventListener('input', ()=>{ recalcRowTotal(date); recalcTotalsPill(); });
+      // 2) Commit on blur/change
+      const commit = ()=>{
+        if(!mm.salesDaily[date]) mm.salesDaily[date] = {Liquor:0,Beer:0,Wine:0};
+        const map = {L:'Liquor', B:'Beer', W:'Wine'}; const k = map[inp.getAttribute('data-s')];
+        mm.salesDaily[date][k] = +inp.value||0;
+        save();
+        // update dashboard numbers without rebuilding this table
+        render();
+      };
+      inp.addEventListener('change', commit);
+      inp.addEventListener('blur', commit);
+      inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ inp.blur(); } });
+    });
+
+    // initial totals pill from DOM
+    recalcTotalsPill();
+  }
+
+  function renderCategory(which){
+    const map = { liq:'Liquor', beer:'Beer', wine:'Wine' };
+    const cat = map[which];
+    const ym = state.selectedYM; const { mm, sales, inv, purch } = monthMeta(ym);
+    const salesCat = sales[cat];
+    const purchCat = purch[cat];
+    const cogsCat = salesCat ? (purchCat / salesCat) : 0;
+    const remain21Cat = 0.21 * salesCat - purchCat;
+
+    // Build invoices list for this category
+    const invCat = inv.filter(i=>i.category===cat);
+
+    const el = document.getElementById(which);
+    el.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <b>${cat} — Details</b>
+        <span class="pill">${invCat.length} invoice${invCat.length===1?'':'s'}</span>
+      </div>
+      <div class="grid g-3" style="margin-top:12px">
+        <div class="stat"><div class="l">${cat} Sales</div><div class="v">${fmt(salesCat)}</div></div>
+        <div class="stat"><div class="l">${cat} Purchases</div><div class="v">${fmt(purchCat)}</div></div>
+        <div class="stat"><div class="l">${cat} COGS</div><div class="v">${(cogsCat*100).toFixed(2)}%</div></div>
+      </div>
+      <div class="grid g-2" style="margin-top:12px">
+        <div class="card">
+          <b>${cat} Spend Guidance</b>
+          <div class="muted" style="margin-top:8px">Max Spend @ 21%: <b>${fmt(0.21 * salesCat)}</b></div>
+          <div class="muted" style="margin-top:4px">Remaining to stay @ 21%: <b>${fmt(remain21Cat)}</b></div>
+        </div>
+        <div class="card">
+          <b>${cat} Budget</b>
+          <div class="row" style="gap:8px;align-items:center;margin-top:8px">
+            <label style="margin:0">Monthly Budget</label>
+            <input type="number" id="budCat" value="${mm.budgets[cat]||0}"/>
+            <button class="btn" id="saveBud">Save</button>
+          </div>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:12px">
+        <table>
+          <thead><tr><th>Date</th><th>Vendor</th><th>Invoice #</th><th>Description</th><th class="right">Amount</th></tr></thead>
+          <tbody id="tbCat">
+            ${invCat.map(x=>`<tr><td>${x.date}</td><td>${esc(x.vendor)}</td><td>${esc(x.invoiceNo)}</td><td>${esc(x.description)}</td><td class="right">${fmt(x.amount)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    // bind save budget
+    el.querySelector('#saveBud').addEventListener('click',()=>{
+      const val = +el.querySelector('#budCat').value||0;
+      mm.budgets[cat] = val; save(); render(); renderCategory(which);
+    });
+  }
+
+  function renderYear(){
+    const ym = state.selectedYM; const [Y] = ym.split('-').map(Number);
+    $('#yearLabel').textContent = Y;
+    const tbody = $('#yearTbody'); tbody.innerHTML='';
+    let sumSales=0,sumPurch=0,sumUnder=0,sumOver=0;
+    for(let m=0;m<12;m++){
+      const thisYM = `${Y}-${String(m+1).padStart(2,'0')}`;
+      const md = state.months[thisYM] || defaultMonth(Y,m);
+      // compute daily sales totals
+      let sL=0,sB=0,sW=0; Object.values(md.salesDaily).forEach(v=>{ sL+=v.Liquor||0; sB+=v.Beer||0; sW+=v.Wine||0; });
+      const salesTotal = sL+sB+sW;
+      const purchTotal = (md.invoices||[]).reduce((acc,i)=>acc+i.amount,0);
+      const cogs = salesTotal? purchTotal/salesTotal : 0;
+
+      // daily counts estimated from monthly ratio
+      let under=0, over=0; const days = daysInMonth(Y,m);
+      for(let d=1; d<=days; d++){
+        const date = new Date(Y,m,d).toISOString().slice(0,10);
+        const s = md.salesDaily[date] || {Liquor:0,Beer:0,Wine:0};
+        const daySales = (s.Liquor||0)+(s.Beer||0)+(s.Wine||0);
+        if(daySales>0){ if(cogs<=0.21) under++; else if(cogs>0.22) over++; }
+      }
+
+      sumSales+=salesTotal; sumPurch+=purchTotal; sumUnder+=under; sumOver+=over;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${thisYM}</td>
+        <td class="right">${fmt(salesTotal)}</td>
+        <td class="right">${fmt(purchTotal)}</td>
+        <td class="right">${(cogs*100).toFixed(2)}%</td>
+        <td class="right">${under}</td>
+        <td class="right">${over}</td>`;
+      tbody.appendChild(tr);
+    }
+    $('#yrSales').textContent = fmt(sumSales);
+    $('#yrPurch').textContent = fmt(sumPurch);
+    const yrCOGS = sumSales? (sumPurch/sumSales) : 0;
+    $('#yrCOGS').textContent = (yrCOGS*100).toFixed(2)+'%';
+    $('#yrUnder').textContent = sumUnder; $('#yrOver').textContent = sumOver;
+  }
+
+  function drawGauge(value){
+    const svg = $('#gauge');
+    svg.innerHTML = '';
+    const cx=120, cy=120, r=90, stroke=18;
+    const mkArc = (start, end, color)=>{
+      const a0 = (start-90)*Math.PI/180, a1=(end-90)*Math.PI/180;
+      const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0);
+      const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+      const large = end-start>180?1:0;
+      const d = `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill','none');
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', stroke);
+      path.setAttribute('stroke-linecap','round');
+      return path;
+    };
+    // background ring
+    svg.appendChild(mkArc(0,360,'#eef7fd'));
+    // 21% target ring
+    svg.appendChild(mkArc(0, (21/100)*360, '#cfe5f2'));
+    // 22% alert ring
+    svg.appendChild(mkArc(0, (22/100)*360, '#f0b5b5'));
+    // value ring
+    const ang = Math.max(0, Math.min(100, value))/100*360;
+    const color = value>22? '#b91c1c' : value>21? '#b45309' : '#15803d';
+    svg.appendChild(mkArc(0, ang, color));
+
+    // center label
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x', cx); txt.setAttribute('y', cy+6); txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','28'); txt.setAttribute('fill','#0b3356');
+    txt.textContent = value.toFixed(2)+'%';
+    svg.appendChild(txt);
+  }
+
+  function esc(s){ return (s||'').replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+  // default dates on dashboard: current month
+  const d0 = firstOfMonth(new Date(state.selectedYM+'-01T00:00:00'));
+  $('#startDate').value = d0.toISOString().slice(0,10);
+  $('#endDate').value = new Date(d0.getFullYear(), d0.getMonth()+1, 0).toISOString().slice(0,10);
+
+  // initial renders
+  render();
+  renderSalesTable();
+  renderCategory('liq');
+})();
+</script>
+</body>
+</html>
